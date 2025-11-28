@@ -1,24 +1,11 @@
 import streamlit as st
 import random
 import time
-import requests
-from streamlit_lottie import st_lottie
 
 # ==========================================
-# 1. 설정 및 리소스 로딩
+# 1. 설정
 # ==========================================
 st.set_page_config(page_title="풍선 팡팡 구구단", page_icon="🎈", layout="centered")
-
-# Lottie 애니메이션 파일을 웹에서 불러오는 함수
-def load_lottieurl(url):
-    r = requests.get(url)
-    if r.status_code != 200:
-        return None
-    return r.json()
-
-# 애니메이션 로딩 (성공 시 폭죽, 시작 화면 풍선)
-lottie_success = load_lottieurl("https://assets10.lottiefiles.com/packages/lf20_u4yrau.json") # 팡 터지는 효과
-lottie_balloon = load_lottieurl("https://lottie.host/9d8b3564-9d51-4148-8951-64d99905c3c0/o7S4O4r0D9.json") # 둥둥 뜨는 풍선
 
 # ==========================================
 # 2. CSS 스타일링 (풍선 디자인 & 움직임)
