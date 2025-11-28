@@ -2,14 +2,42 @@ import streamlit as st
 import random
 import time
 
-# 1. 페이지 기본 설정
-st.set_page_config(page_title="구구단 풍선 터뜨리기", page_icon="🎈")
+# 1. 페이지 설정 및 디자인 커스터마이징 (CSS)
+st.set_page_config(page_title="구구단 풍선 챌린지", page_icon="🎈")
 
-st.title("🎈 구구단 풍선 터뜨리기 🎈")
-st.subheader("정답 풍선을 터뜨려 점수를 얻으세요!")
+# 버튼 스타일을 풍선처럼 동그랗고 예쁘게 만드는 CSS 코드
+st.markdown("""
+<style>
+    div.stButton > button {
+        width: 100%;
+        height: 100px;
+        font-size: 30px;
+        border-radius: 20px;
+        background-color: #FFDDC1;
+        border: 2px solid #FFABAB;
+        color: #D32F2F;
+        transition: transform 0.2s;
+    }
+    div.stButton > button:hover {
+        transform: scale(1.05);
+        background-color: #FFABAB;
+        color: white;
+    }
+    .big-font {
+        font-size: 60px !important;
+        font-weight: bold;
+        color: #1E88E5;
+        text-align: center;
+    }
+    .score-board {
+        font-size: 25px;
+        font-weight: bold;
+        color: #43A047;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# 2. 게임 상태(변수) 초기화 (점수, 문제 등)
-# Streamlit은 버튼을 누를 때마다 코드가 재실행되므로, 변수를 기억하기 위해 session_state를 씁니다.
+# 2. 게임 상태 초기화
 if 'score' not in st.session_state:
     st.session_state.score = 0
 if 'num1' not in st.session_state:
@@ -17,71 +45,109 @@ if 'num1' not in st.session_state:
     st.session_state.num2 = 0
     st.session_state.answer = 0
     st.session_state.options = []
+if 'feedback' not in st.session_state:
+    st.session_state.feedback = "" # 정답/오답 메시지 저장용
 
-# 3. 문제 출제 함수
+# 3. 문제 생성 함수
 def generate_problem():
-    # 2단 ~ 9단 사이 랜덤 생성
-    n1 = random.randint(2, 9)
-    n2 = random.randint(1, 9)
-    ans = n1 * n2
+    st.session_state.num1 = random.randint(2, 9)
+    st.session_state.num2 = random.randint(1, 9)
+    st.session_state.answer = st.session_state.num1 * st.session_state.num2
     
-    # 보기 생성 (정답 1개 + 오답 3개)
-    options = [ans]
+    # 보기 생성 (정답 + 오답)
+    ans = st.session_state.answer
+    options = set([ans]) # 중복 방지를 위해 집합(set) 사용
+    
     while len(options) < 4:
-        # 정답 주변의 숫자로 오답 생성 (난이도 조절)
         wrong = ans + random.randint(-10, 10)
-        if wrong > 0 and wrong not in options: # 중복 방지 및 음수 방지
-            options.append(wrong)
-    
-    random.shuffle(options) # 보기 순서 섞기
-    
-    # 상태 저장
-    st.session_state.num1 = n1
-    st.session_state.num2 = n2
-    st.session_state.answer = ans
-    st.session_state.options = options
+        if wrong > 0 and wrong != ans:
+            options.add(wrong)
+            
+    st.session_state.options = list(options)
+    random.shuffle(st.session_state.options)
+    st.session_state.feedback = "" # 피드백 초기화
 
-# 처음에 문제가 없으면 생성
+# 게임 초기 실행 시 문제 생성
 if st.session_state.num1 == 0:
     generate_problem()
 
-# 4. 화면 레이아웃 구성
-# 현재 점수 표시
-st.metric(label="현재 점수", value=f"{st.session_state.score} 점")
+# ================= 게임 화면 구성 =================
 
-# 문제 표시 (크고 잘 보이게)
-st.markdown(f"""
-    <div style='text-align: center; font-size: 50px; font-weight: bold; margin: 20px;'>
-        {st.session_state.num1} × {st.session_state.num2} = ❓
-    </div>
-    """, unsafe_allow_html=True)
+# 4. 승리 화면 (100점 달성 시)
+if st.session_state.score >= 100:
+    st.balloons() # 풍선 애니메이션 효과!
+    st.markdown("<h1 style='text-align: center; color: orange;'>🏆 미션 성공! 🏆</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align: center;'>축하합니다! 100점을 달성했어요!</h3>", unsafe_allow_html=True)
+    
+    st.image("https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif", use_container_width=True) # 축하 GIF
+    
+    if st.button("🔄 처음부터 다시 도전하기"):
+        st.session_state.score = 0
+        generate_problem()
+        st.rerun()
 
-st.write("---")
+# 5. 진행 중인 게임 화면
+else:
+    st.title("🎈 구구단 풍선 챌린지")
+    
+    # 상단 정보창 (점수 & 진행바)
+    col_info1, col_info2 = st.columns([3, 1])
+    with col_info1:
+        # 진행 상황 (Progress Bar)
+        progress = st.session_state.score / 100
+        st.write(f"**미션 달성률 ({st.session_state.score}/100)**")
+        st.progress(progress)
+    with col_info2:
+        st.markdown(f"<div class='score-board'>점수: {st.session_state.score}</div>", unsafe_allow_html=True)
 
-# 5. 풍선(보기) 버튼 배치
-# 4개의 컬럼으로 나누어 버튼을 가로로 배치
-cols = st.columns(4)
+    st.divider()
 
-for i, option_val in enumerate(st.session_state.options):
-    with cols[i]:
-        # 버튼 클릭 시 동작
-        if st.button(f"🎈 {option_val}", use_container_width=True):
-            if option_val == st.session_state.answer:
-                # 정답일 경우
-                st.success(f"정답입니다! {st.session_state.answer} 맞아요! 🎉")
-                st.session_state.score += 10 # 10점 추가
-                time.sleep(1) # 축하 메시지를 1초 보여주고
-                generate_problem() # 새 문제 생성
-                st.rerun() # 화면 새로고침
-            else:
-                # 오답일 경우
-                st.error(f"아니에요! {st.session_state.num1} × {st.session_state.num2} 은 {option_val}이 아니에요. 💥")
-                if st.session_state.score > 0:
-                    st.session_state.score -= 5 # 5점 감점
+    # 문제 표시
+    st.markdown(f"<div class='big-font'>{st.session_state.num1} × {st.session_state.num2} = ❓</div>", unsafe_allow_html=True)
+    
+    st.write("") # 여백
+    st.write("") 
 
-# 6. 리셋 버튼
-st.write("---")
-if st.button("🔄 게임 다시 시작하기"):
-    st.session_state.score = 0
-    generate_problem()
-    st.rerun()
+    # 피드백 메시지 표시 (정답/오답 알림)
+    if st.session_state.feedback == "correct":
+        st.info("딩동댕! 정답입니다! ⭕ (+10점)")
+    elif st.session_state.feedback == "wrong":
+        st.error("땡! 다시 생각해보세요! ❌ (-5점)")
+
+    st.write("") 
+
+    # 보기 버튼 배치 (2x2 그리드 형태)
+    col1, col2 = st.columns(2)
+    col3, col4 = st.columns(2)
+    cols = [col1, col2, col3, col4]
+
+    for i, option_val in enumerate(st.session_state.options):
+        with cols[i]:
+            # 버튼 클릭 로직
+            if st.button(f"{option_val}", key=f"btn_{i}"):
+                if option_val == st.session_state.answer:
+                    # 정답 처리
+                    st.session_state.score += 10
+                    st.session_state.feedback = "correct"
+                    
+                    # 100점 달성 즉시 승리 화면으로 가기 위해 바로 리런하지 않고, 
+                    # 점수 체크 후 리런
+                    if st.session_state.score >= 100:
+                        st.rerun()
+                    
+                    generate_problem() # 새 문제 생성
+                    st.rerun()
+                else:
+                    # 오답 처리
+                    if st.session_state.score > 0:
+                        st.session_state.score -= 5
+                    st.session_state.feedback = "wrong"
+                    st.rerun()
+
+    st.divider()
+    
+    # 게임 리셋 버튼
+    if st.button("🔄 게임 다시 시작하기", use_container_width=True):
+        st.session_state.score = 0
+        generate_problem()
+        st.rerun()
